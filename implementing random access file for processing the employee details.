@@ -1,0 +1,134 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define FILENAME "employee.dat"
+#define RECORD_SIZE  sizeof(struct Employee)
+
+struct Employee {
+    int emp_id;
+    char emp_name[50];
+    float emp_salary;
+};
+
+void addRecord(FILE *fp) {
+    struct Employee emp;
+    printf("Enter Employee ID: ");
+    scanf("%d", &emp.emp_id);
+    printf("Enter Employee Name: ");
+    scanf("%s", emp.emp_name);
+    printf("Enter Employee Salary: ");
+    scanf("%f", &emp.emp_salary);
+
+    fseek(fp, 0, SEEK_END);
+    fwrite(&emp, RECORD_SIZE, 1, fp);
+    printf("Record added successfully!\n");
+}
+
+void displayRecords(FILE *fp) {
+    struct Employee emp;
+    rewind(fp);
+    printf("\nEmployee Records:\n");
+    while (fread(&emp, RECORD_SIZE, 1, fp) == 1) {
+        printf("ID: %d, Name: %s, Salary: %.2f\n", emp.emp_id, emp.emp_name, emp.emp_salary);
+    }
+}
+
+void updateRecord(FILE *fp, int id) {
+    struct Employee emp;
+    int found = 0;
+
+    rewind(fp);
+    while (fread(&emp, RECORD_SIZE, 1, fp) == 1) {
+        if (emp.emp_id == id) {
+            found = 1;
+            printf("Enter new name: ");
+            scanf("%s", emp.emp_name);
+            printf("Enter new salary: ");
+            scanf("%f", &emp.emp_salary);
+            fseek(fp, -RECORD_SIZE, SEEK_CUR);
+            fwrite(&emp, RECORD_SIZE, 1, fp);
+            printf("Record updated successfully!\n");
+            break;
+        }
+    }
+
+    if (!found)
+        printf("Record not found!\n");
+}
+
+void deleteRecord(FILE *fp, int id) {
+    struct Employee emp;
+    FILE *temp;
+    int found = 0;
+
+    temp = fopen("temp.dat", "wb");
+    rewind(fp);
+    while (fread(&emp, RECORD_SIZE, 1, fp) == 1) {
+        if (emp.emp_id != id)
+            fwrite(&emp, RECORD_SIZE, 1, temp);
+        else
+            found = 1;
+    }
+
+    fclose(fp);
+    fclose(temp);
+    remove(FILENAME);
+    rename("temp.dat", FILENAME);
+
+    if (found)
+        printf("Record deleted successfully!\n");
+    else
+        printf("Record not found!\n");
+}
+
+int main() {
+    FILE *fp;
+    int choice, id;
+
+    fp = fopen(FILENAME, "rb+");
+    if (fp == NULL) {
+        fp = fopen(FILENAME, "wb+");
+        if (fp == NULL) {
+            printf("Cannot open file %s\n", FILENAME);
+            return 1;
+        }
+    }
+
+    while (1) {
+        printf("\nEmployee Database\n");
+        printf("1. Add Record\n");
+        printf("2. Display Records\n");
+        printf("3. Update Record\n");
+        printf("4. Delete Record\n");
+        printf("5. Exit\n");
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                addRecord(fp);
+                break;
+            case 2:
+                displayRecords(fp);
+                break;
+            case 3:
+                printf("Enter Employee ID to update: ");
+                scanf("%d", &id);
+                updateRecord(fp, id);
+                break;
+            case 4:
+                printf("Enter Employee ID to delete: ");
+                scanf("%d", &id);
+                deleteRecord(fp, id);
+                break;
+            case 5:
+                fclose(fp);
+                exit(0);
+            default:
+                printf("Invalid choice! Please enter a number between 1 and 5.\n");
+        }
+    }
+
+    return 0;
+}
